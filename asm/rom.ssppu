@@ -1,0 +1,133 @@
+#define SERIAL_TX         0xD080 // MMIO
+#define SERIAL_RX_STATUS  0xD081
+#define SERIAL_RX_H       0xD0
+#define SERIAL_RX_L       0xC0
+#define SERIAL_RX_7       0xD0C7
+#define RAM_I             0x7FFF // We store our variables at the end of WRAM
+#define TRAMPOLINE        0x7FFC
+#define TRAMPOLINE_OFFSET 0x7FFD
+#define TRAMPOLINE_RET    0x7FFE
+#define RAM_BLOCKS_AMOUNT 0x7FFB
+#define CODE_ENTRY        0
+
+org 0xF000
+entry:
+
+print_welcome:
+	LD Ra #0
+print_welcome_loop:
+	ST [RAM_I] Ra
+	CALL wait_for_uart_tx_ready
+
+	LD Ra [RAM_I]
+	LD Rb [welcome_msg,Ra]
+
+	LD Ra #0
+	XOR nw Rb
+	JE print_welcome_end
+
+	ST [SERIAL_TX] Rb
+
+	LD Ra [RAM_I]
+	LD Rb #1
+	ADD Ra
+	JMP print_welcome_loop
+print_welcome_end:
+
+read_blocks_amount:
+	CALL wait_for_uart_rx_packet
+	ST [SERIAL_RX_STATUS] Ra
+
+	LD Ra [SERIAL_RX_7]
+	ST [RAM_BLOCKS_AMOUNT] Ra
+
+	CALL wait_for_uart_tx_ready
+	LD Ra [RAM_BLOCKS_AMOUNT]
+	ST [SERIAL_TX] Ra
+
+setup_trampoline:
+	LD Ra #0b10011001 // ST [0,Ra] Rb
+	ST [TRAMPOLINE] Ra
+	LD Ra #0
+	ST [TRAMPOLINE_OFFSET] Ra
+	LD Ra #0b11001000 // RET
+	ST [TRAMPOLINE_RET] Ra
+
+load_init:
+	LD Ra #0
+	ST [RAM_I] Ra
+
+	CALL wait_for_uart_tx_ready
+	LD Ra [TRAMPOLINE_OFFSET]
+	ST [SERIAL_TX] Ra
+
+load_outer_loop:
+	CALL wait_for_uart_tx_ready
+	LD Ra [RAM_I]
+	ST [SERIAL_TX] Ra
+
+	CALL wait_for_uart_rx_packet
+	ST [SERIAL_RX_STATUS] Ra
+load_inner_loop:
+	LD Ra [RAM_I]
+	LD Rb #0b111
+	AND Ra
+	LD Rb #SERIAL_RX_L
+	OR Ra
+	LD Rb [SERIAL_RX_H,Ra]
+
+	LD Ra [RAM_I]
+	CALL TRAMPOLINE // ST [TRAMPOLINE_OFFSET,Ra] Rb
+
+	LD Rb #1
+	ADD Ra
+	JC increment_trampoline
+	ST [RAM_I] Ra
+	LD Rb #0b111
+	AND Ra
+	JNZ load_inner_loop
+	JMP load_outer_loop
+
+increment_trampoline:
+	LD Ra [TRAMPOLINE_OFFSET]
+	LD Rb #1
+	ADD Ra
+
+	// TODO : Dynamic loading size
+	// LD Rb #0x40
+	LD Rb [RAM_BLOCKS_AMOUNT]
+	XOR nw Ra
+	JE CODE_ENTRY
+
+	ST [TRAMPOLINE_OFFSET] Ra
+	JMP load_init
+
+wait_for_uart_rx_packet:
+	LD Rb #0
+wait_for_uart_rx_packet_is_zero:
+	LD Ra [SERIAL_RX_STATUS]
+	XOR nw Ra
+	JE wait_for_uart_rx_packet_is_zero
+
+	LD Rb #0b111
+	AND Ra
+	JNZ wait_for_uart_rx_packet
+	RET
+
+wait_for_uart_tx_ready:
+	LD Rb #0xFF
+wait_for_uart_tx_ready_loop:
+	LD Ra [SERIAL_TX]
+	XOR nw Ra
+	JNE wait_for_uart_tx_ready_loop
+	RET
+
+org 0xFF00
+welcome_msg:
+db 0x53 0x53 0x50 0x50 0x55 0x20 0x42 0x4f 0x4f 0x54 0x4c 0x4f 0x41 0x44 0x45 0x52 0xa // "SSPPU BOOTLOADER\n"
+db 0x2a 0x2a 0x2a 0x2a 0x20 0x53 0x74 0x61 0x72 0x74 0x20 0x61 0x70 0x70 0x72 0x69 0x63 0x61 0x74 0x69 0x6f 0x6e 0x20 0x2a 0x2a 0x2a 0x2a 0xa // "**** Start apprication ****\n"
+db 0
+
+org 0xFFFC
+reset_vector:
+	JMP entry
