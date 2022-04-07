@@ -93,8 +93,6 @@ increment_trampoline:
 	LD Rb #1
 	ADD Ra
 
-	// TODO : Dynamic loading size
-	// LD Rb #0x40
 	LD Rb [RAM_BLOCKS_AMOUNT]
 	XOR nw Ra
 	JE CODE_ENTRY
