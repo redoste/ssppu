@@ -10,6 +10,8 @@ entity mmu is
 
 		gpio_signals_out : out std_logic_vector(24 downto 0);
 		gpio_signals_in  : in std_logic_vector(9 downto 0);
+		pixel_coord      : in  std_logic_vector(13 downto 0);
+		pixel_color      : out std_logic_vector(11 downto 0);
 
 		w   : in std_logic;
 		clk : in std_logic);
@@ -21,6 +23,18 @@ architecture mmu of mmu is
 			a : in std_logic_vector(14 downto 0);
 			d : in std_logic_vector(7 downto 0);
 			q : out std_logic_vector(7 downto 0);
+
+			w   : in std_logic;
+			clk : in std_logic);
+	end component;
+	component vram is
+		port(
+			a : in std_logic_vector(13 downto 0);
+			d : in std_logic_vector(7 downto 0);
+			q : out std_logic_vector(7 downto 0);
+
+			pixel_coord : in  std_logic_vector(13 downto 0);
+			pixel_color : out std_logic_vector(11 downto 0);
 
 			w   : in std_logic;
 			clk : in std_logic);
@@ -61,6 +75,15 @@ begin
 		d => d,
 		q => wram_q,
 		w => wram_w,
+		clk => clk
+	);
+	lvram: vram port map (
+		a => a(13 downto 0),
+		d => d,
+		q => vram_q,
+		pixel_coord => pixel_coord,
+		pixel_color => pixel_color,
+		w => vram_w,
 		clk => clk
 	);
 	lrom: rom port map (

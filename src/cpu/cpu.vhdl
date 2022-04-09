@@ -6,6 +6,8 @@ entity cpu is
 	port(
 		gpio_signals_out : out std_logic_vector(24 downto 0);
 		gpio_signals_in  : in std_logic_vector(9 downto 0);
+		pixel_coord      : in  std_logic_vector(13 downto 0);
+		pixel_color      : out std_logic_vector(11 downto 0);
 
 		r   : in std_logic;
 		clk : in std_logic);
@@ -94,6 +96,8 @@ architecture cpu of cpu is
 
 			gpio_signals_out : out std_logic_vector(24 downto 0);
 			gpio_signals_in  : in std_logic_vector(9 downto 0);
+			pixel_coord      : in  std_logic_vector(13 downto 0);
+			pixel_color      : out std_logic_vector(11 downto 0);
 
 			w   : in std_logic;
 			clk : in std_logic);
@@ -253,6 +257,8 @@ begin
 		q => mmu_q,
 		gpio_signals_out => gpio_signals_out,
 		gpio_signals_in => gpio_signals_in,
+		pixel_coord => pixel_coord,
+		pixel_color => pixel_color,
 		w => cs_mmu_w,
 		clk => clk
 	);

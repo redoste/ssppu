@@ -12,6 +12,8 @@ create_generated_clock -name cpu_clk -source [get_ports clk] -divide_by 10 [get_
 create_generated_clock -name uart_tx_clk -source [get_pins cpu_clk_reg/Q] -divide_by 1042 [get_pins lgpio_controller/uart_tx_clk_reg/Q]
 # NOTE : The RX clock will intentionally drift to make sure that the rising edge is at the middle of a bit
 create_generated_clock -name uart_rx_clk -source [get_pins cpu_clk_reg/Q] -divide_by 1042 [get_pins lgpio_controller/uart_rx_clk_reg/Q]
+# VGA 5MHz clock
+create_generated_clock -name pixel_clk -source [get_pins cpu_clk_reg/Q] -divide_by 2 [get_pins lvga_controller/pixel_clk_reg/Q]
 
 # ====================
 #         GPIO
@@ -174,6 +176,8 @@ set_property PACKAGE_PIN P19 [get_ports vga_hs]
 set_property IOSTANDARD LVCMOS33 [get_ports vga_hs]
 set_property PACKAGE_PIN R19 [get_ports vga_vs]
 set_property IOSTANDARD LVCMOS33 [get_ports vga_vs]
+
+set_output_delay -clock [get_clocks pixel_clk] 0.000 [get_ports {{vga_red[0]} {vga_red[1]} {vga_red[2]} {vga_red[3]} {vga_blue[0]} {vga_blue[1]} {vga_blue[2]} {vga_blue[3]} {vga_green[0]} {vga_green[1]} {vga_green[2]} {vga_green[3]} {vga_hs} {vga_vs}}]
 
 # ====================
 #        Config
