@@ -13,7 +13,7 @@ entity wram is
 end entity;
 
 architecture wram of wram is
-	type ram_type is array(16#7ffff# downto 0) of std_logic_vector(7 downto 0);
+	type ram_type is array(16#7fff# downto 0) of std_logic_vector(7 downto 0);
 	signal ram_data : ram_type := (others => (others => '0'));
 begin
 	q <= ram_data(to_integer(unsigned(a)));
