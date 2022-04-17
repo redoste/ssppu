@@ -15,7 +15,7 @@ end entity;
 
 architecture ir of ir is
 begin
-	process(clk) begin
+	process(clk, el, eh) begin
 		if(rising_edge(clk) and el = '1') then
 			ql <= d;
 		end if;

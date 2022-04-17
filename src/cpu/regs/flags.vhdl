@@ -16,7 +16,7 @@ end entity;
 
 architecture flags of flags is
 begin
-	process(clk) begin
+	process(clk, e) begin
 		if(rising_edge(clk) and e = '1') then
 			zfq <= zfd;
 			cfq <= cfd;

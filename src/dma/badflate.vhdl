@@ -132,7 +132,9 @@ begin
 		clk => clk
 	);
 
-	process(clk) begin
+	process(clk, addr_e, copy_len_base_e, copy_len_eb_remaining_bits_e, copy_len_eb_e, copy_len_eb_shift_offset_e,
+		copy_len_done_e, copy_dist_base_e, copy_dist_eb_remaining_e, copy_dist_eb_e, copy_dist_eb_shift_offset_e,
+		copy_current_byte_e, huffman_output_changed) begin
 		if(rising_edge(clk)) then
 			state_q <= state_d;
 		end if;

@@ -25,7 +25,7 @@ begin
 	-- It is required for DMA because LUTRAM can't have 2 write ports
 	-- However it adds an extra delay on the output
 	q <= ram_data(to_integer(unsigned(a)));
-	process(clk) begin
+	process(clk, w) begin
 		if(rising_edge(clk) and w = '1') then
 			ram_data(to_integer(unsigned(a))) <= d;
 		end if;

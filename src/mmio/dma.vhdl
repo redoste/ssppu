@@ -94,7 +94,7 @@ begin
 		clk => clk
 	);
 
-	process(clk) begin
+	process(clk, bf_byte_shift_regs_e, bf_should_load_next_byte, bf_out_addr_wh, bf_out_addr_wl, bf_ram_w) begin
 		if(rising_edge(clk) and bf_byte_shift_regs_e = '1') then
 			bf_byte_shift_reg_q <= bf_byte_shift_reg_d;
 			bf_next_byte_shift_reg_q <= bf_next_byte_shift_reg_d;
@@ -141,7 +141,7 @@ begin
 	fake_dma_w <= bf_w;
 
 	fake_dma_q <= fake_dma_ram(to_integer(unsigned(fake_dma_a(9 downto 0))));
-	process(clk) begin
+	process(clk, fake_dma_w) begin
 		if(rising_edge(clk) and fake_dma_w = '1') then
 			fake_dma_ram(to_integer(unsigned(fake_dma_a(9 downto 0)))) <= fake_dma_d;
 		end if;

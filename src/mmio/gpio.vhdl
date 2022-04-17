@@ -55,7 +55,7 @@ begin
 		     (others => '0')            when others;
 
 	-- LEDS
-	process(clk) begin
+	process(clk, leds_wh, leds_wl) begin
 		if(rising_edge(clk) and leds_wh = '1') then
 			leds_qh <= d;
 		end if;
@@ -72,7 +72,7 @@ begin
 	gpio_signals_out(15 downto 0) <= leds_qh & leds_ql;
 
 	-- UART TX
-	process(clk) begin
+	process(clk, uart_tx_data_buffer_w) begin
 		if(rising_edge(clk) and uart_tx_data_buffer_w = '1') then
 			uart_tx_data_buffer_q <= d;
 		end if;
@@ -90,7 +90,7 @@ begin
 
 
 	-- UART RX
-	process(clk) begin
+	process(clk, uart_rx_changed, uart_rx_index_z) begin
 		if(rising_edge(clk) and uart_rx_changed = '1') then
 			uart_rx_last_changed_byte_q <= uart_rx_changed_byte;
 			uart_rx_buffer(to_integer(unsigned(uart_rx_index_q(2 downto 0)))) <= gpio_signals_in(9 downto 2); -- UART RX data

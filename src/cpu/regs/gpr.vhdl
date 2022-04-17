@@ -13,7 +13,7 @@ end entity;
 
 architecture gpr of gpr is
 begin
-	process(clk) begin
+	process(clk, e) begin
 		if(rising_edge(clk) and e = '1') then
 			q <= d;
 		end if;

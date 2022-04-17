@@ -23,7 +23,7 @@ architecture vram of vram is
 	signal indexed_color : std_logic_vector(3 downto 0);
 begin
 	q <= vram_data(to_integer(unsigned(a)));
-	process(clk) begin
+	process(clk, w) begin
 		if(rising_edge(clk) and w = '1') then
 			vram_data(to_integer(unsigned(a))) <= d;
 		end if;

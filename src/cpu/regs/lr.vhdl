@@ -14,7 +14,7 @@ end entity;
 
 architecture lr of lr is
 begin
-	process(clk) begin
+	process(clk, e) begin
 		if(rising_edge(clk) and e = '1') then
 			qh <= d(15 downto 8);
 			ql <= d(7 downto 0);

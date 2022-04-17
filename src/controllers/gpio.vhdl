@@ -85,7 +85,7 @@ begin
 	gpio_signals_in(0) <= uart_tx_ready_reg_q(0);
 
 	-- UART RX
-	process(uart_rx_clk) begin
+	process(uart_rx_clk, uart_rx_valid_byte) begin
 		if(rising_edge(uart_rx_clk)) then
 			uart_rx_shift_reg_q <= uart_rx_shift_reg_d;
 		end if;

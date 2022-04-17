@@ -16,7 +16,7 @@ architecture ad of ad is
 	signal qh_internal : std_logic_vector(7 downto 0);
 	signal ql_internal : std_logic_vector(7 downto 0);
 begin
-	process(clk) begin
+	process(clk, el, eh) begin
 		if(rising_edge(clk) and el = '1') then
 			ql_internal <= d;
 		end if;

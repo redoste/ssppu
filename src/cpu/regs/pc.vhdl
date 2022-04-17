@@ -21,7 +21,7 @@ architecture pc of pc is
 	signal inputs : std_logic_vector(2 downto 0);
 	signal d_inc  : std_logic_vector(15 downto 0);
 begin
-	process(clk) begin
+	process(clk, e_internal) begin
 		if(rising_edge(clk) and e_internal = '1') then
 			q_internal <= d_internal;
 		end if;

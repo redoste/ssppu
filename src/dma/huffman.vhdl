@@ -25,7 +25,7 @@ architecture huffman of huffman is
 	signal output_reg_e               : std_logic;
 	signal output_reg_changed_interal : std_logic := '0';
 begin
-	process(clk) begin
+	process(clk, output_reg_e) begin
 		if(rising_edge(clk)) then
 			current_node_addr_q <= current_node_addr_d;
 		end if;
