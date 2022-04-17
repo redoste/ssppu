@@ -31,8 +31,8 @@ begin
 	o_add <= std_logic_vector(('0' & unsigned(a)) + unsigned(b));
 	o_sub <= std_logic_vector(('0' & unsigned(a)) - unsigned(b));
 
-	o_shl <= a(6 downto 0) & '0';
-	o_shr <= '0' & a(7 downto 1);
+	o_shl <= std_logic_vector(shift_left(unsigned(a), to_integer(unsigned(b))));
+	o_shr <= std_logic_vector(shift_right(unsigned(a), to_integer(unsigned(b))));
 
 	o_and <= a and b;
 	o_or  <= a or  b;
