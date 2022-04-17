@@ -130,7 +130,7 @@ begin
 
 	bf_out_addr_q <= unsigned(std_logic_vector'(bf_out_addr_qh(6 downto 0) & bf_out_addr_ql));
 
-	-- TODO : Support real DMA : see src/mmio/wram.vhdl
+	-- TODO : Support real DMA
 	-- dma_a <= std_logic_vector(bf_out_addr_q + unsigned(bf_addr(14 downto 0)));
 	-- dma_d <= bf_data_d;
 	-- bf_data_q <= dma_q;

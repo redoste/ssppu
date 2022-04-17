@@ -8,6 +8,8 @@ entity mmu is
 		d : in std_logic_vector(7 downto 0);
 		q : out std_logic_vector(7 downto 0);
 
+		reading_slow_ram : out std_logic;
+
 		gpio_signals_out : out std_logic_vector(24 downto 0);
 		gpio_signals_in  : in std_logic_vector(9 downto 0);
 		pixel_coord      : in  std_logic_vector(13 downto 0);
@@ -157,6 +159,17 @@ begin
 		     gpio_q when "1110",
 		     rom_q  when "1111",
 		     wram_q when others;
+
+	with bank select
+		reading_slow_ram <= '0' when "1000",
+				    '0' when "1001",
+				    '0' when "1010",
+				    '0' when "1011",
+				    '0' when "1100",
+				    '0' when "1101",
+				    '0' when "1110",
+				    '0' when "1111",
+				    '1' when others;
 
 	with bank(3) select
 		wram_w <= w   when '0',

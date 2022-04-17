@@ -85,6 +85,8 @@ architecture cpu of cpu is
 		port(
 			q : out std_logic_vector(3 downto 0);
 
+			slower : in std_logic;
+
 			r   : in std_logic;
 			clk : in std_logic);
 	end component;
@@ -93,6 +95,8 @@ architecture cpu of cpu is
 			a : in std_logic_vector(15 downto 0);
 			d : in std_logic_vector(7 downto 0);
 			q : out std_logic_vector(7 downto 0);
+
+			reading_slow_ram : out std_logic;
 
 			gpio_signals_out : out std_logic_vector(24 downto 0);
 			gpio_signals_in  : in std_logic_vector(9 downto 0);
@@ -129,6 +133,9 @@ architecture cpu of cpu is
 	signal upc_q : std_logic_vector(3 downto 0);
 
 	signal mmu_q : std_logic_vector(7 downto 0);
+
+	signal mmu_reading_slow_ram : std_logic;
+	signal upc_slower           : std_logic;
 
 	signal flags_cfd : std_logic;
 	signal flags_zfd : std_logic;
@@ -247,6 +254,7 @@ begin
 
 	lupc: upc port map (
 		q => upc_q,
+		slower => upc_slower,
 		r => cs_upc_z or r,
 		clk => clk
 	);
@@ -255,6 +263,7 @@ begin
 		a => addr_bus,
 		d => data_bus,
 		q => mmu_q,
+		reading_slow_ram => mmu_reading_slow_ram,
 		gpio_signals_out => gpio_signals_out,
 		gpio_signals_in => gpio_signals_in,
 		pixel_coord => pixel_coord,
@@ -279,6 +288,8 @@ begin
 			    ir_ql when "100",
 			    lr_qh when "101",
 			    lr_ql when others;
+
+	upc_slower <= mmu_reading_slow_ram when (cs_db_sel = "010") else '0';
 
 	with cs_ab_sel select
 		addr_bus <= ad_q when '0',
