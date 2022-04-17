@@ -23,8 +23,13 @@ architecture mmu of mmu is
 			a : in std_logic_vector(14 downto 0);
 			d : in std_logic_vector(7 downto 0);
 			q : out std_logic_vector(7 downto 0);
-
 			w   : in std_logic;
+
+			dma_a : in std_logic_vector(14 downto 0);
+			dma_d : in std_logic_vector(7 downto 0);
+			dma_q : out std_logic_vector(7 downto 0);
+			dma_w : in std_logic;
+
 			clk : in std_logic);
 	end component;
 	component vram is
@@ -56,6 +61,20 @@ architecture mmu of mmu is
 			w   : in std_logic;
 			clk : in std_logic);
 	end component;
+	component dma is
+		port(
+			a : in std_logic_vector(11 downto 0);
+			d : in std_logic_vector(7 downto 0);
+			q : out std_logic_vector(7 downto 0);
+			w   : in std_logic;
+
+			dma_a : out std_logic_vector(14 downto 0);
+			dma_d : out std_logic_vector(7 downto 0);
+			dma_q : in std_logic_vector(7 downto 0);
+			dma_w : out std_logic;
+
+			clk : in std_logic);
+	end component;
 
 	signal bank : std_logic_vector(3 downto 0);
 
@@ -69,12 +88,21 @@ architecture mmu of mmu is
 	signal dma_w  : std_logic;
 	signal gpio_w : std_logic;
 	signal wram_w : std_logic;
+
+	signal dma_wram_a : std_logic_vector(14 downto 0);
+	signal dma_wram_d : std_logic_vector(7 downto 0);
+	signal dma_wram_q : std_logic_vector(7 downto 0);
+	signal dma_wram_w : std_logic;
 begin
 	lwram: wram port map (
 		a => a(14 downto 0),
 		d => d,
 		q => wram_q,
 		w => wram_w,
+		dma_a => dma_wram_a,
+		dma_d => dma_wram_d,
+		dma_q => dma_wram_q,
+		dma_w => dma_wram_w,
 		clk => clk
 	);
 	lvram: vram port map (
@@ -97,6 +125,17 @@ begin
 		gpio_signals_out => gpio_signals_out,
 		gpio_signals_in => gpio_signals_in,
 		w => gpio_w,
+		clk => clk
+	);
+	ldma: dma port map (
+		a => a(11 downto 0),
+		d => d,
+		q => dma_q,
+		w => dma_w,
+		dma_a => dma_wram_a,
+		dma_d => dma_wram_d,
+		dma_q => dma_wram_q,
+		dma_w => dma_wram_w,
 		clk => clk
 	);
 
