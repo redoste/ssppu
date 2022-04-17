@@ -106,6 +106,8 @@ architecture badflate of badflate is
 	signal copy_current_byte_q : std_logic_vector(7 downto 0);
 	signal copy_current_byte_d : std_logic_vector(7 downto 0);
 	signal copy_current_byte_e : std_logic;
+	signal read_copy_delay_q   : std_logic;
+	signal read_copy_delay_d   : std_logic;
 
 	signal should_write_literal    : std_logic;
 	signal should_write_copy       : std_logic;
@@ -170,6 +172,9 @@ begin
 		end if;
 		if(rising_edge(clk) and copy_current_byte_e = '1') then
 			copy_current_byte_q <= copy_current_byte_d;
+		end if;
+		if(rising_edge(clk)) then
+			read_copy_delay_q <= read_copy_delay_d;
 		end if;
 		if(rising_edge(clk) and huffman_output_changed = '1') then
 			huffman_last_output_change_q <= huffman_output_change;
@@ -366,6 +371,8 @@ begin
 	copy_current_byte_d <= data_q;
 	copy_current_byte_e <= '1' when (state_q = READ_COPY) else '0';
 
+	read_copy_delay_d <= '1' when (state_q = READ_COPY) else '0';
+
 	copy_len_done_e <= '1' when (state_q = WRITE_COPY or state_q = COPY_LEN_I) else '0';
 	with state_q select
 		copy_len_done_d <= 0                   when COPY_LEN_I,
@@ -382,7 +389,7 @@ begin
 	copy_dist_i_finished <= '1' when (state_q = COPY_DIST_I) else '0';
 	copy_dist_bypass_eb <= '1' when (state_q = COPY_DIST_I and copy_dist_eb_remaining_d = -1) else '0';
 	copy_dist_eb_finished <= '1' when (state_q = COPY_DIST_EB and copy_dist_eb_remaining_q = 0) else '0';
-	read_copy_finished <= '1' when (state_q = READ_COPY) else '0';
+	read_copy_finished <= '1' when (state_q = READ_COPY and read_copy_delay_q = '1') else '0';
 	write_copy_finished <= '1' when (state_q = WRITE_COPY) else '0';
 	write_copy_all_finished <= '1' when (state_q = WRITE_COPY and copy_len_done_q = (copy_len_base_q + to_integer(unsigned(copy_len_eb_u)) - 1)) else '0';
 

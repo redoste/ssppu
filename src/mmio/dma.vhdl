@@ -72,12 +72,6 @@ architecture dma of dma is
 	type bf_ram_type is array(16#3ff# downto 0) of std_logic_vector(7 downto 0);
 	signal bf_ram   : bf_ram_type := (others => (others => '0'));
 	signal bf_ram_w : std_logic;
-
-	signal fake_dma_ram : bf_ram_type := (others => (others => '0'));
-	signal fake_dma_a   : std_logic_vector(14 downto 0);
-	signal fake_dma_d   : std_logic_vector(7 downto 0);
-	signal fake_dma_q   : std_logic_vector(7 downto 0);
-	signal fake_dma_w   : std_logic;
 begin
 	lbadflate: badflate port map (
 		input => bf_input,
@@ -130,22 +124,10 @@ begin
 
 	bf_out_addr_q <= unsigned(std_logic_vector'(bf_out_addr_qh(6 downto 0) & bf_out_addr_ql));
 
-	-- TODO : Support real DMA
-	-- dma_a <= std_logic_vector(bf_out_addr_q + unsigned(bf_addr(14 downto 0)));
-	-- dma_d <= bf_data_d;
-	-- bf_data_q <= dma_q;
-	-- dma_w <= bf_w;
-	fake_dma_a <= std_logic_vector(bf_out_addr_q + unsigned(bf_addr(14 downto 0)));
-	fake_dma_d <= bf_data_d;
-	bf_data_q <= fake_dma_q;
-	fake_dma_w <= bf_w;
-
-	fake_dma_q <= fake_dma_ram(to_integer(unsigned(fake_dma_a(9 downto 0))));
-	process(clk, fake_dma_w) begin
-		if(rising_edge(clk) and fake_dma_w = '1') then
-			fake_dma_ram(to_integer(unsigned(fake_dma_a(9 downto 0)))) <= fake_dma_d;
-		end if;
-	end process;
+	dma_a <= std_logic_vector(bf_out_addr_q + unsigned(bf_addr(14 downto 0)));
+	dma_d <= bf_data_d;
+	bf_data_q <= dma_q;
+	dma_w <= bf_w;
 
 	with a select
 		bf_control_q <= bf_out_addr_qh     when x"400",
@@ -157,7 +139,6 @@ begin
 	select_bits <= a(11 downto 10);
 	with select_bits select
 		q <= bf_ram(to_integer(unsigned(a(9 downto 0))))       when "00",
-		     fake_dma_ram(to_integer(unsigned(a(9 downto 0)))) when "11",
 		     bf_control_q                                      when others;
 	bf_ram_w <= w when (select_bits = "00") else '0';
 
