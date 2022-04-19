@@ -40,6 +40,7 @@ architecture mmu of mmu is
 			d : in std_logic_vector(7 downto 0);
 			q : out std_logic_vector(7 downto 0);
 
+			video_mode  : in  std_logic;
 			pixel_coord : in  std_logic_vector(13 downto 0);
 			pixel_color : out std_logic_vector(11 downto 0);
 
@@ -59,6 +60,7 @@ architecture mmu of mmu is
 
 			gpio_signals_out : out std_logic_vector(24 downto 0);
 			gpio_signals_in  : in std_logic_vector(9 downto 0);
+			video_mode       : out std_logic;
 
 			w   : in std_logic;
 			clk : in std_logic);
@@ -79,6 +81,8 @@ architecture mmu of mmu is
 	end component;
 
 	signal bank : std_logic_vector(3 downto 0);
+
+	signal vram_video_mode : std_logic;
 
 	signal vram_q : std_logic_vector(7 downto 0);
 	signal dma_q  : std_logic_vector(7 downto 0);
@@ -111,6 +115,7 @@ begin
 		a => a(13 downto 0),
 		d => d,
 		q => vram_q,
+		video_mode => vram_video_mode,
 		pixel_coord => pixel_coord,
 		pixel_color => pixel_color,
 		w => vram_w,
@@ -126,6 +131,7 @@ begin
 		q => gpio_q,
 		gpio_signals_out => gpio_signals_out,
 		gpio_signals_in => gpio_signals_in,
+		video_mode => vram_video_mode,
 		w => gpio_w,
 		clk => clk
 	);

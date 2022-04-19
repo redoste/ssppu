@@ -10,6 +10,7 @@ entity gpio_mmio is
 
 		gpio_signals_out : out std_logic_vector(24 downto 0);
 		gpio_signals_in  : in std_logic_vector(9 downto 0);
+		video_mode       : out std_logic;
 
 		w   : in std_logic;
 		clk : in std_logic);
@@ -38,6 +39,9 @@ architecture gpio_mmio of gpio_mmio is
 
 	type uart_rx_buffer_type is array(7 downto 0) of std_logic_vector(7 downto 0);
 	signal uart_rx_buffer : uart_rx_buffer_type := (others => (others => '0'));
+
+	signal video_mode_q : std_logic;
+	signal video_mode_w : std_logic;
 begin
 	with a select
 		q <= leds_qh                    when "00000000",
@@ -52,6 +56,7 @@ begin
 		     uart_rx_buffer(5)          when "11000101",
 		     uart_rx_buffer(6)          when "11000110",
 		     uart_rx_buffer(7)          when "11000111",
+		     (others => video_mode_q)   when "11100000",
 		     (others => '0')            when others;
 
 	-- LEDS
@@ -107,4 +112,13 @@ begin
 				   (others => '0')                                 when others;
 	uart_rx_changed <= uart_rx_last_changed_byte_q xor uart_rx_changed_byte;
 	uart_rx_changed_byte <= gpio_signals_in(1);
+
+	-- Video Mode
+	process(clk, video_mode_w) begin
+		if(rising_edge(clk) and video_mode_w = '1') then
+			video_mode_q <= d(0);
+		end if;
+	end process;
+	video_mode <= video_mode_q;
+	video_mode_w <= w when (a = "11100000") else '0';
 end architecture;
