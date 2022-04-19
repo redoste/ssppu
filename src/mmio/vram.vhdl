@@ -17,19 +17,24 @@ end entity;
 
 architecture vram of vram is
 	type vram_type is array(16#3fff# downto 0) of std_logic_vector(7 downto 0);
-	signal vram_data : vram_type := (others => (others => '0'));
+	shared variable vram_data : vram_type := (others => (others => '0'));
+
+	attribute ram_style : string;
+	attribute ram_style of vram_data : variable is "block";
 
 	signal selected_byte : std_logic_vector(7 downto 0);
 	signal indexed_color : std_logic_vector(3 downto 0);
 begin
-	q <= vram_data(to_integer(unsigned(a)));
 	process(clk, w) begin
-		if(rising_edge(clk) and w = '1') then
-			vram_data(to_integer(unsigned(a))) <= d;
+		if(rising_edge(clk)) then
+			selected_byte <= vram_data(to_integer(unsigned(pixel_coord(13 downto 1))));
+			q <= vram_data(to_integer(unsigned(a)));
+			if(w = '1') then
+				vram_data(to_integer(unsigned(a))) := d;
+			end if;
 		end if;
 	end process;
 
-	selected_byte <= vram_data(to_integer(unsigned(pixel_coord(13 downto 1))));
 	with pixel_coord(0) select
 		indexed_color <= selected_byte(3 downto 0) when '0',
 				 selected_byte(7 downto 4) when others;

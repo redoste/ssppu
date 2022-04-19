@@ -161,10 +161,10 @@ begin
 		     wram_q when others;
 
 	with bank select
-		reading_slow_ram <= '0' when "1000",
-				    '0' when "1001",
-				    '0' when "1010",
-				    '0' when "1011",
+		reading_slow_ram <= '1' when "1000",
+				    '1' when "1001",
+				    '1' when "1010",
+				    '1' when "1011",
 				    '0' when "1100",
 				    '0' when "1101",
 				    '0' when "1110",
