@@ -26,6 +26,9 @@ architecture vga_controller of vga_controller is
 	signal pixel_x : std_logic_vector(6 downto 0);
 	signal pixel_y : std_logic_vector(6 downto 0);
 
+	signal pixel_color_q : std_logic_vector(11 downto 0);
+	signal pixel_color_d : std_logic_vector(11 downto 0);
+
 	signal vga_hs_b : boolean;
 	signal vga_vs_b : boolean;
 	signal visible  : boolean;
@@ -46,6 +49,7 @@ begin
 			if(pixel_row = 525) then
 				pixel_row <= 0;
 			end if;
+			pixel_color_q <= pixel_color_d;
 		end if;
 	end process;
 	vga_hs_b <= pixel_col > 130 and pixel_col < 151;
@@ -53,13 +57,17 @@ begin
 	vga_vs_b <= pixel_row > 490 and pixel_row < 493;
 	vga_vs <= '0' when vga_vs_b else '1';
 
+	visible <= pixel_col <= 128 and pixel_row <= 480;
+
 	pixel_x <= std_logic_vector(to_unsigned(pixel_col, pixel_x'length));
 	pixel_y <= std_logic_vector(to_unsigned(pixel_row / 5, pixel_y'length));
 
 	pixel_coord <= pixel_y & pixel_x;
+	with visible select
+		pixel_color_d <= pixel_color     when true,
+				 (others => '0') when false;
 
-	visible <= pixel_col <= 128 and pixel_row <= 480;
-	vga_red <= pixel_color(3 downto 0) when visible else "0000";
-	vga_blue <= pixel_color(7 downto 4) when visible else "0000";
-	vga_green <= pixel_color(11 downto 8) when visible else "0000";
+	vga_red <= pixel_color_q(3 downto 0) when visible else "0000";
+	vga_blue <= pixel_color_q(7 downto 4) when visible else "0000";
+	vga_green <= pixel_color_q(11 downto 8) when visible else "0000";
 end architecture;
