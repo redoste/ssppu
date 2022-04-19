@@ -4,14 +4,15 @@ use ieee.numeric_std.all;
 
 entity gpio_controller is
 	port(
-		gpio_signals_out : in std_logic_vector(24 downto 0);
+		gpio_signals_out : in std_logic_vector(28 downto 0);
 		gpio_signals_in  : out std_logic_vector(9 downto 0);
 
 		leds    : out std_logic_vector(15 downto 0);
 		uart_tx : out std_logic;
 		uart_rx : in std_logic;
 
-		clk : in std_logic);
+		board_clk : in std_logic;
+		cpu_clk   : in std_logic);
 end entity;
 
 architecture gpio_controller of gpio_controller is
@@ -29,7 +30,8 @@ architecture gpio_controller of gpio_controller is
 	signal uart_rx_changed_byte : std_logic := '0';
 	signal uart_rx_valid_byte   : std_logic;
 
-	constant UART_CLK_COUNTER_MAX     : integer := 521;   -- 10MHz / (521 * 2) = 9600Hz
+	signal uart_clk_selector          : std_logic_vector(3 downto 0);
+	signal uart_clk_counter_max       : integer range 434 to 5208;
 	signal uart_tx_clk                : std_logic := '0';
 	signal uart_tx_clk_counter        : integer := 0;
 	signal uart_rx_clk                : std_logic := '0';
@@ -42,11 +44,11 @@ begin
 	leds <= gpio_signals_out(15 downto 0);
 
 	-- UART clocks
-	process(clk) begin
-		if(rising_edge(clk)) then
+	process(board_clk) begin
+		if(rising_edge(board_clk)) then
 			-- TX clock
 			uart_tx_clk_counter <= uart_tx_clk_counter + 1;
-			if(uart_tx_clk_counter = UART_CLK_COUNTER_MAX - 1) then
+			if(uart_tx_clk_counter >= uart_clk_counter_max - 1) then
 				uart_tx_clk <= not uart_tx_clk;
 				uart_tx_clk_counter <= 0;
 			end if;
@@ -54,7 +56,7 @@ begin
 			-- It will intentionally drift to make sure that the rising edge is at the middle of a bit
 			-- This will reduce transmission errors that might occur if the line isn't set completely yet
 			uart_rx_clk_counter <= uart_rx_clk_counter + 1;
-			if(uart_rx_clk_counter = UART_CLK_COUNTER_MAX - 1 or uart_rx_clk_force = '1') then
+			if(uart_rx_clk_counter >= uart_clk_counter_max - 1 or uart_rx_clk_force = '1') then
 				uart_rx_clk <= uart_rx_clk_d;
 				uart_rx_clk_counter <= 0;
 			end if;
@@ -65,6 +67,13 @@ begin
 	with uart_rx_clk_force select
 		uart_rx_clk_d <= not uart_rx_clk when '0',
 				 '0'             when others;
+	uart_clk_selector <= gpio_signals_out(28 downto 25);
+	with uart_clk_selector select
+		uart_clk_counter_max <= 2604 when x"1",   -- 100MHz / (2604 * 2) ~  19201Hz :  19200bps : 0.01%
+					1302 when x"2",   -- 100MHz / (1302 * 2) ~  38402Hz :  38400bps : 0.01%
+					868  when x"3",   -- 100MHz / (868  * 2) ~  57604Hz :  57600bps : 0.01%
+					434  when x"4",   -- 100MHz / (434  * 2) ~ 115207Hz : 115200bps : 0.01%
+					5208 when others; -- 100MHz / (5208 * 2) ~   9601Hz :   9600bps : 0.01%
 
 	-- UART TX
 	uart_tx_data <= gpio_signals_out(23 downto 16);

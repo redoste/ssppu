@@ -8,7 +8,7 @@ entity gpio_mmio is
 		d : in std_logic_vector(7 downto 0);
 		q : out std_logic_vector(7 downto 0);
 
-		gpio_signals_out : out std_logic_vector(24 downto 0);
+		gpio_signals_out : out std_logic_vector(28 downto 0);
 		gpio_signals_in  : in std_logic_vector(9 downto 0);
 		video_mode       : out std_logic;
 
@@ -21,6 +21,9 @@ architecture gpio_mmio of gpio_mmio is
 	signal leds_ql : std_logic_vector(7 downto 0);
 	signal leds_wh : std_logic;
 	signal leds_wl : std_logic;
+
+	signal uart_clk_selector_q : std_logic_vector(3 downto 0) := x"0";
+	signal uart_clk_selector_w : std_logic;
 
 	signal uart_tx_ready  : std_logic;
 	signal uart_tx_status : std_logic;
@@ -48,6 +51,7 @@ begin
 		     leds_ql                    when "00000001",
 		     (others => uart_tx_status) when "10000000",
 		     uart_rx_index_q            when "10000001",
+		     x"0" & uart_clk_selector_q when "10000010",
 		     uart_rx_buffer(0)          when "11000000",
 		     uart_rx_buffer(1)          when "11000001",
 		     uart_rx_buffer(2)          when "11000010",
@@ -75,6 +79,15 @@ begin
 		leds_wl <= w  when "00000001",
 			  '0' when others;
 	gpio_signals_out(15 downto 0) <= leds_qh & leds_ql;
+
+	-- UART clock
+	process(clk, uart_clk_selector_w) begin
+		if(rising_edge(clk) and uart_clk_selector_w = '1') then
+			uart_clk_selector_q <= d(3 downto 0);
+		end if;
+	end process;
+	gpio_signals_out(28 downto 25) <= uart_clk_selector_q;
+	uart_clk_selector_w <= w when (a = "10000010") else '0';
 
 	-- UART TX
 	process(clk, uart_tx_data_buffer_w) begin

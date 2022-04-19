@@ -8,10 +8,11 @@ set_property IOSTANDARD LVCMOS33 [get_ports clk]
 create_clock -period 10.000 -name sys_clk_pin -waveform {0.000 5.000} -add [get_ports clk]
 # CPU 10MHz clock
 create_generated_clock -name cpu_clk -source [get_ports clk] -divide_by 10 [get_pins cpu_clk_reg/Q]
-# UART 9600Hz clocks
-create_generated_clock -name uart_tx_clk -source [get_pins cpu_clk_reg/Q] -divide_by 1042 [get_pins lgpio_controller/uart_tx_clk_reg/Q]
+# UART 9600Hz - 115207Hz clocks
+# We check constraints with the maximum frequency
+create_generated_clock -name uart_tx_clk -source [get_ports clk] -divide_by 868 [get_pins lgpio_controller/uart_tx_clk_reg/Q]
 # NOTE : The RX clock will intentionally drift to make sure that the rising edge is at the middle of a bit
-create_generated_clock -name uart_rx_clk -source [get_pins cpu_clk_reg/Q] -divide_by 1042 [get_pins lgpio_controller/uart_rx_clk_reg/Q]
+create_generated_clock -name uart_rx_clk -source [get_ports clk] -divide_by 868 [get_pins lgpio_controller/uart_rx_clk_reg/Q]
 # VGA 5MHz clock
 create_generated_clock -name pixel_clk -source [get_pins cpu_clk_reg/Q] -divide_by 2 [get_pins lvga_controller/pixel_clk_reg/Q]
 

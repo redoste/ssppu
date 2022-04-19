@@ -10,7 +10,7 @@ entity mmu is
 
 		reading_slow_ram : out std_logic;
 
-		gpio_signals_out : out std_logic_vector(24 downto 0);
+		gpio_signals_out : out std_logic_vector(28 downto 0);
 		gpio_signals_in  : in std_logic_vector(9 downto 0);
 		pixel_coord      : in  std_logic_vector(13 downto 0);
 		pixel_color      : out std_logic_vector(11 downto 0);
@@ -58,7 +58,7 @@ architecture mmu of mmu is
 			d : in std_logic_vector(7 downto 0);
 			q : out std_logic_vector(7 downto 0);
 
-			gpio_signals_out : out std_logic_vector(24 downto 0);
+			gpio_signals_out : out std_logic_vector(28 downto 0);
 			gpio_signals_in  : in std_logic_vector(9 downto 0);
 			video_mode       : out std_logic;
 

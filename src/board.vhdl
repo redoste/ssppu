@@ -27,7 +27,7 @@ end entity;
 architecture board of board is
 	component cpu is
 		port(
-			gpio_signals_out : out std_logic_vector(24 downto 0);
+			gpio_signals_out : out std_logic_vector(28 downto 0);
 			gpio_signals_in  : in std_logic_vector(9 downto 0);
 			pixel_coord      : in  std_logic_vector(13 downto 0);
 			pixel_color      : out std_logic_vector(11 downto 0);
@@ -37,14 +37,15 @@ architecture board of board is
 	end component;
 	component gpio_controller is
 		port(
-			gpio_signals_out : in std_logic_vector(24 downto 0);
+			gpio_signals_out : in std_logic_vector(28 downto 0);
 			gpio_signals_in  : out std_logic_vector(9 downto 0);
 
 			leds    : out std_logic_vector(15 downto 0);
 			uart_tx : out std_logic;
 			uart_rx : in std_logic;
 
-			clk : in std_logic);
+			board_clk : in std_logic;
+			cpu_clk   : in std_logic);
 	end component;
 	component vga_controller is
 		port(
@@ -63,7 +64,7 @@ architecture board of board is
 
 	signal r : std_logic := '1';
 
-	signal gpio_signals_out : std_logic_vector(24 downto 0);
+	signal gpio_signals_out : std_logic_vector(28 downto 0);
 	signal gpio_signals_in  : std_logic_vector(9 downto 0);
 	signal pixel_coord      : std_logic_vector(13 downto 0);
 	signal pixel_color      : std_logic_vector(11 downto 0);
@@ -87,7 +88,8 @@ begin
 		leds => leds,
 		uart_tx => uart_txd,
 		uart_rx => uart_rxd,
-		clk => cpu_clk
+		board_clk => clk,
+		cpu_clk => cpu_clk
 	);
 
 	lvga_controller: vga_controller port map (
