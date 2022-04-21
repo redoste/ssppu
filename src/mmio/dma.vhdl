@@ -9,6 +9,8 @@ entity dma is
 		q : out std_logic_vector(7 downto 0);
 		w   : in std_logic;
 
+		gpio_signals_in : in std_logic_vector(9 downto 0);
+
 		dma_a : out std_logic_vector(14 downto 0);
 		dma_d : out std_logic_vector(7 downto 0);
 		dma_q : in std_logic_vector(7 downto 0);
@@ -38,6 +40,40 @@ architecture dma of dma is
 	end component;
 
 	signal select_bits  : std_logic_vector(1 downto 0);
+
+	-- UART
+
+	signal uart_control_q : std_logic_vector(7 downto 0);
+
+	signal uart_out_addr_qh : std_logic_vector(7 downto 0);
+	signal uart_out_addr_wh : std_logic;
+	signal uart_out_addr_ql : std_logic_vector(7 downto 0);
+	signal uart_out_addr_wl : std_logic;
+	signal uart_out_addr_q  : unsigned(14 downto 0);
+	signal uart_out_len_qh  : std_logic_vector(7 downto 0);
+	signal uart_out_len_wh  : std_logic;
+	signal uart_out_len_ql  : std_logic_vector(7 downto 0);
+	signal uart_out_len_wl  : std_logic;
+	signal uart_out_len_q   : unsigned(14 downto 0);
+
+	signal uart_done_len_q : unsigned(14 downto 0);
+	signal uart_done_len_d : unsigned(14 downto 0);
+	signal uart_done_len_e : std_logic;
+
+	signal uart_last_changed_byte_q : std_logic := '0';
+	signal uart_changed_byte        : std_logic;
+	signal uart_changed             : std_logic;
+
+	signal uart_running_q : std_logic := '0';
+	signal uart_running_d : std_logic;
+	signal uart_running_s : std_logic;
+	signal uart_running_r : std_logic;
+
+	signal uart_dma_w : std_logic := '0';
+	signal uart_dma_a : std_logic_vector(14 downto 0);
+
+	-- Badflate
+
 	signal bf_control_q : std_logic_vector(7 downto 0);
 
 	signal bf_out_addr_qh : std_logic_vector(7 downto 0);
@@ -68,11 +104,89 @@ architecture dma of dma is
 	signal bf_data_d : std_logic_vector(7 downto 0);
 	signal bf_data_q : std_logic_vector(7 downto 0);
 	signal bf_w      : std_logic;
+	signal bf_dma_a  : std_logic_vector(14 downto 0);
 
 	type bf_ram_type is array(16#3ff# downto 0) of std_logic_vector(7 downto 0);
 	signal bf_ram   : bf_ram_type := (others => (others => '0'));
 	signal bf_ram_w : std_logic;
 begin
+	select_bits <= a(11 downto 10);
+	with select_bits select
+		q <= bf_ram(to_integer(unsigned(a(9 downto 0)))) when "00",
+		     bf_control_q                                when "01",
+		     uart_control_q                              when others;
+
+	with uart_running_q select
+		dma_a <= bf_dma_a   when '0',
+			 uart_dma_a when others;
+	with uart_running_q select
+		dma_d <= bf_data_d                   when '0',
+			 gpio_signals_in(9 downto 2) when others;
+	with uart_running_q select
+		dma_w <= bf_w       when '0',
+			 uart_dma_w when others;
+
+	-- UART
+
+	process(clk, uart_out_addr_wh, uart_out_addr_wl, uart_out_len_wh, uart_out_len_wl, uart_done_len_e, uart_changed, uart_running_s, uart_running_r, uart_running_q) begin
+		if(rising_edge(clk) and uart_out_addr_wh = '1') then
+			uart_out_addr_qh <= d;
+		end if;
+		if(rising_edge(clk) and uart_out_addr_wl = '1') then
+			uart_out_addr_ql <= d;
+		end if;
+		if(rising_edge(clk) and uart_out_len_wh = '1') then
+			uart_out_len_qh <= d;
+		end if;
+		if(rising_edge(clk) and uart_out_len_wl = '1') then
+			uart_out_len_ql <= d;
+		end if;
+
+		if(rising_edge(clk) and uart_done_len_e = '1') then
+			uart_done_len_q <= uart_done_len_d;
+		end if;
+
+		if(rising_edge(clk) and uart_changed = '1') then
+			uart_last_changed_byte_q <= uart_changed_byte;
+		end if;
+
+		if(rising_edge(clk) and (uart_running_s or uart_running_r) = '1') then
+			uart_running_q <= uart_running_d;
+		end if;
+
+		if(rising_edge(clk) and uart_running_q = '1') then
+			uart_dma_w <= uart_changed;
+		end if;
+	end process;
+
+	uart_out_addr_wh <= w when (a = x"800") else '0';
+	uart_out_addr_wl <= w when (a = x"801") else '0';
+	uart_out_len_wh <= w when (a = x"802") else '0';
+	uart_out_len_wl <= w when (a = x"803") else '0';
+	uart_out_addr_q <= unsigned(std_logic_vector'(uart_out_addr_qh(6 downto 0) & uart_out_addr_ql));
+	uart_out_len_q <= unsigned(std_logic_vector'(uart_out_len_qh(6 downto 0) & uart_out_len_ql));
+
+	uart_done_len_e <= not uart_running_q or uart_changed;
+	uart_done_len_d <= uart_done_len_q + 1 when (uart_running_q = '1') else (others => '0');
+
+	uart_changed_byte <= gpio_signals_in(1);
+	uart_changed <= uart_last_changed_byte_q xor uart_changed_byte;
+
+	uart_running_s <= '1' when (w = '1' and a = x"804" and bf_rdy = '1') else '0';
+	uart_running_r <= '1' when (uart_done_len_q >= uart_out_len_q) else '0';
+	uart_running_d <= '1' when (uart_running_s = '1' and uart_running_r = '0') else '0';
+
+	uart_dma_a <= std_logic_vector(uart_out_addr_q + uart_done_len_q - 1);
+
+	with a select
+		uart_control_q <= uart_out_addr_qh                          when x"800",
+				  uart_out_addr_ql                          when x"801",
+				  uart_out_len_qh                           when x"802",
+				  uart_out_len_ql                           when x"803",
+				  (others => bf_rdy and not uart_running_q) when others;
+
+	-- Badflate
+
 	lbadflate: badflate port map (
 		input => bf_input,
 		read => bf_read,
@@ -120,26 +234,20 @@ begin
 	bf_should_load_next_byte <= (bf_next_byte_shift_reg_q(0) and bf_read) or bf_go;
 	bf_input <= bf_byte_shift_reg_q(0);
 
-	bf_go <= '1' when (bf_rdy = '1' and w = '1' and a = x"402") else '0';
+	bf_go <= '1' when (bf_rdy = '1' and w = '1' and a = x"402" and uart_running_q = '0') else '0';
 
 	bf_out_addr_q <= unsigned(std_logic_vector'(bf_out_addr_qh(6 downto 0) & bf_out_addr_ql));
 
-	dma_a <= std_logic_vector(bf_out_addr_q + unsigned(bf_addr(14 downto 0)));
-	dma_d <= bf_data_d;
+	bf_dma_a <= std_logic_vector(bf_out_addr_q + unsigned(bf_addr(14 downto 0)));
 	bf_data_q <= dma_q;
-	dma_w <= bf_w;
 
 	with a select
-		bf_control_q <= bf_out_addr_qh     when x"400",
-				bf_out_addr_ql     when x"401",
-				(others => bf_rdy) when others;
+		bf_control_q <= bf_out_addr_qh                            when x"400",
+				bf_out_addr_ql                            when x"401",
+				(others => bf_rdy and not uart_running_q) when others;
 	bf_out_addr_wh <= w when (a = x"400") else '0';
 	bf_out_addr_wl <= w when (a = x"401") else '0';
 
-	select_bits <= a(11 downto 10);
-	with select_bits select
-		q <= bf_ram(to_integer(unsigned(a(9 downto 0))))       when "00",
-		     bf_control_q                                      when others;
 	bf_ram_w <= w when (select_bits = "00") else '0';
 
 	-- TODO : Support custom huffman codes

@@ -72,6 +72,8 @@ architecture mmu of mmu is
 			q : out std_logic_vector(7 downto 0);
 			w   : in std_logic;
 
+			gpio_signals_in : in std_logic_vector(9 downto 0);
+
 			dma_a : out std_logic_vector(14 downto 0);
 			dma_d : out std_logic_vector(7 downto 0);
 			dma_q : in std_logic_vector(7 downto 0);
@@ -140,6 +142,7 @@ begin
 		d => d,
 		q => dma_q,
 		w => dma_w,
+		gpio_signals_in => gpio_signals_in,
 		dma_a => dma_wram_a,
 		dma_d => dma_wram_d,
 		dma_q => dma_wram_q,
