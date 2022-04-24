@@ -1,0 +1,189 @@
+/*
+ * Bad Apple Demo
+ * ==============
+ * Usage :
+ * $ youtube-dl -f bestvideo -o "badapple.%(ext)s" FtutLA63Cp8
+ *
+ * $ mkdir ba_frames && ffmpeg -i badapple.* -vf scale=128:96:flags=neighbor -r 30 ba_frames/%04d.png
+ * $ for f in ba_frames/*.png; do convert -depth 1 "$f" "$f.pbm"; done
+ * $ for f in ba_frames/*.pbm; do python3 ../tools/pbm_to_badflate.py "$f" > "$f.bf"; done
+ * $ rm -v ba_frames/{*.png,*.pbm}
+ *
+ * $ cpp bad_apple.ssppu | python3 ../tools/ssppu_as.py bin > bad_apple.bin
+ * $ python3 ../tools/bad_apple.py /dev/ttyUSBX bad_apple.bin ba_frames/ 30
+ *
+ * I noticed that converting to PBM with ImageMagick instead of ffmpeg produced better results thanks to the
+ * lack of dithering. It should be possible to disable it in ffmpeg but it sounds like a pain to setup and
+ * requires a super long command. Using ImageMagick adds an extra step but makes the process easier to understand.
+ */
+// Variables
+#define BUFFER_H           0x60
+#define BUFFER_L           0x0
+#define MEMCPY_RANGE_START 0x7FFF
+#define MEMCPY_RANGE_END   0x7FFE
+
+#define MEMCPY_TRAMPOLINE           0xD0
+#define MEMCPY_TRAMPOLINE_LD_OFFSET 0xD1
+#define MEMCPY_TRAMPOLINE_ST_OFFSET 0xD3
+
+// MMIO
+#define SERIAL_TX         0xD080
+#define SERIAL_RX_STATUS  0xD081
+#define SERIAL_RX_0       0xD0C0
+#define SERIAL_RX_1       0xD0C1
+#define SERIAL_CLK        0xD082
+#define SERIAL_115200     4
+
+#define DMA_BADFLATE_RAM_BASE 0xC0
+#define DMA_BADFLATE_RAM_END  0xC4
+#define DMA_BADFLATE_ADDR_H   0xC400
+#define DMA_BADFLATE_ADDR_L   0xC401
+#define DMA_BADFLATE_STATUS   0xC402
+
+#define DMA_SERIAL_ADDR_H 0xC800
+#define DMA_SERIAL_ADDR_L 0xC801
+#define DMA_SERIAL_LEN_H  0xC802
+#define DMA_SERIAL_LEN_L  0xC803
+#define DMA_SERIAL_STATUS 0xC804
+
+#define VIDEO_MODE 0xD0E0
+#define VRAM_BASE  0x80
+#define VRAM_END   0x86
+
+org 0
+entry:
+	LD Ra #BUFFER_H
+	ST [DMA_SERIAL_ADDR_H] Ra
+	ST [DMA_BADFLATE_ADDR_H] Ra
+	LD Ra #BUFFER_L
+	ST [DMA_SERIAL_ADDR_L] Ra
+	ST [DMA_BADFLATE_ADDR_L] Ra
+
+	// 1 bit per pixel
+	LD Ra #1
+	ST [VIDEO_MODE] Ra
+
+	// Byte to inform we are switching speed
+	CALL wait_for_uart_tx_ready
+	LD Ra #0xaa
+	ST [SERIAL_TX] Ra
+	CALL wait_for_uart_tx_ready
+
+	LD Ra #SERIAL_115200
+	ST [SERIAL_CLK] Ra
+
+new_frame:
+
+read_length:
+	LD Rb #2
+read_length_loop:
+	LD Ra [SERIAL_RX_STATUS]
+	XOR nw Ra
+	JNE read_length_loop
+
+	ST [SERIAL_RX_STATUS] Ra
+
+	LD Ra [SERIAL_RX_1]
+	ST [DMA_SERIAL_LEN_L] Ra
+	LD Ra [SERIAL_RX_0]
+	ST [DMA_SERIAL_LEN_H] Ra
+
+	CALL wait_for_uart_tx_ready
+	LD Ra [DMA_SERIAL_LEN_H]
+	ST [SERIAL_TX] Ra
+	CALL wait_for_uart_tx_ready
+	LD Ra [DMA_SERIAL_LEN_L]
+	ST [SERIAL_TX] Ra
+
+read_frame:
+	ST [DMA_SERIAL_STATUS] Ra
+
+	LD Rb #0xFF
+wait_for_dma_serial_loop:
+	LD Ra [DMA_SERIAL_STATUS]
+	XOR nw Ra
+	JNE wait_for_dma_serial_loop
+
+	ST [SERIAL_RX_STATUS] Ra
+
+memcpy_to_dma_badflate_ram:
+	LD Ra #DMA_BADFLATE_RAM_BASE
+	ST [MEMCPY_RANGE_START] Ra
+	LD Ra #DMA_BADFLATE_RAM_END
+	ST [MEMCPY_RANGE_END] Ra
+	CALL memcpy_from_buffer
+
+decompress:
+	ST [DMA_BADFLATE_STATUS] Ra
+
+	LD Rb #0xFF
+wait_for_dma_badflate_loop:
+	LD Ra [DMA_BADFLATE_STATUS]
+	XOR nw Ra
+	JNE wait_for_dma_badflate_loop
+
+memcpy_to_vram:
+	LD Ra #VRAM_BASE
+	ST [MEMCPY_RANGE_START] Ra
+	LD Ra #VRAM_END
+	ST [MEMCPY_RANGE_END] Ra
+	CALL memcpy_from_buffer
+
+end:
+	// Byte to inform we finished this frame
+	CALL wait_for_uart_tx_ready
+	LD Ra #0xbb
+	ST [SERIAL_TX] Ra
+
+	JMP new_frame
+
+wait_for_uart_tx_ready:
+	LD Rb #0xFF
+wait_for_uart_tx_ready_loop:
+	LD Ra [SERIAL_TX]
+	XOR nw Ra
+	JNE wait_for_uart_tx_ready_loop
+	RET
+
+memcpy_from_buffer:
+	LD Ra #BUFFER_H
+	ST [MEMCPY_TRAMPOLINE_LD_OFFSET] Ra
+	LD Ra [MEMCPY_RANGE_START]
+	ST [MEMCPY_TRAMPOLINE_ST_OFFSET] Ra
+
+memcpy_loop_init:
+	LD Ra #0
+memcpy_loop:
+	// We can't use CALL since we are already in a subroutine and we have only one link register
+	JMP MEMCPY_TRAMPOLINE
+memcpy_resume:
+	LD Rb #1
+	ADD Ra
+	JC memcpy_increment_trampoline
+	JMP memcpy_loop
+
+memcpy_increment_trampoline:
+	LD Ra [MEMCPY_TRAMPOLINE_LD_OFFSET]
+	LD Rb #1
+	ADD Ra
+	ST [MEMCPY_TRAMPOLINE_LD_OFFSET] Ra
+
+	LD Ra [MEMCPY_TRAMPOLINE_ST_OFFSET]
+	LD Rb #1
+	ADD Ra
+
+	LD Rb [MEMCPY_RANGE_END]
+	XOR nw Ra
+	JE memcpy_end
+
+	ST [MEMCPY_TRAMPOLINE_ST_OFFSET] Ra
+
+	JMP memcpy_loop_init
+
+memcpy_end:
+	RET
+
+org MEMCPY_TRAMPOLINE
+	LD Rb [0xff,Ra]
+	ST [0xff,Ra] Rb
+	JMP memcpy_resume
