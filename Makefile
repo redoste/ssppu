@@ -1,8 +1,8 @@
 .PHONY: all
 all: project
 
-src/mmio/rom.vhdl: asm/rom.ssppu tools/ssppu-as.py tools/ssppu-as-template.head tools/ssppu-as-template.tail
-	cpp $< | python3 tools/ssppu-as.py vhdl | cat tools/ssppu-as-template.head - tools/ssppu-as-template.tail > $@
+src/mmio/rom.vhdl: asm/rom.ssppu tools/ssppu_as.py tools/ssppu_as_template.head tools/ssppu_as_template.tail
+	cpp $< | python3 tools/ssppu_as.py vhdl | cat tools/ssppu_as_template.head - tools/ssppu_as_template.tail > $@
 
 .PHONY: project
 project: vivado/ssppu.xpr

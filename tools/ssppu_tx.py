@@ -2,24 +2,16 @@ import serial
 import struct
 import sys
 
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage : {} SERIAL_INTERFACE PROGRAM_FILE".format(sys.argv[0]), file=sys.stderr)
-        sys.exit(1)
+def tx_program(ser, program):
+    program_len = len(program)
+    assert program_len <= 0x4000
 
-    with open(sys.argv[2], "rb") as program_file:
-        program = program_file.read()
-        program_len = len(program)
-        assert program_len <= 0x4000
+    if program_len & 0xFF != 0:
+        program_len = (program_len + 0x100) & 0xFFFFFF00
+    assert program_len >= 0x100
+    assert program_len <= 0x4000
 
-        if program_len & 0xFF != 0:
-            program_len = (program_len + 0x100) & 0xFFFFFF00
-        assert program_len >= 0x100
-        assert program_len <= 0x4000
-
-        program = program + b"\xaa" * (program_len - len(program))
-
-    ser = serial.Serial(sys.argv[1], 9600)
+    program = program + b"\xaa" * (program_len - len(program))
 
     for _ in range(2):
         print(" < welcome msg {}".format(ser.readline()))
@@ -39,3 +31,13 @@ if __name__ == "__main__":
             assert query == j * 8
             offset = (i * 0x100) + (j * 8)
             ser.write(program[offset:offset+8])
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage : {} SERIAL_INTERFACE PROGRAM_FILE".format(sys.argv[0]), file=sys.stderr)
+        sys.exit(1)
+
+    with open(sys.argv[2], "rb") as program_file:
+        program = program_file.read()
+    ser = serial.Serial(sys.argv[1], 9600)
+    tx_program(ser, program)
