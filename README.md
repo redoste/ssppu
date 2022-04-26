@@ -9,3 +9,11 @@ Even though it has some differences, the original architecture was inspired by [
 ![Architecture Diagram](./architecture.svg)
 
 Red signals are hardcoded, black ones can be controlled by control signals.
+
+## Demos
+
+### Bad Apple
+
+It plays [Bad Apple](https://en.wikipedia.org/wiki/Bad_Apple!!#Use_as_a_graphical_and_audio_test) : [Source](examples/bad_apple.ssppu) [Video (YouTube)](https://youtu.be/le3ezgEN8j0)
+
+[![YouTube Thumbnail](https://i.ytimg.com/vi/le3ezgEN8j0/hqdefault.jpg)](https://youtu.be/le3ezgEN8j0)
