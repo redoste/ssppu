@@ -10,7 +10,10 @@ entity gpio_mmio is
 
 		gpio_signals_out : out std_logic_vector(28 downto 0);
 		gpio_signals_in  : in std_logic_vector(9 downto 0);
-		video_mode       : out std_logic;
+
+		video_mode        : out std_logic;
+		video_color       : out std_logic_vector(11 downto 0);
+		video_color_index : in std_logic_vector(3 downto 0);
 
 		w   : in std_logic;
 		clk : in std_logic);
@@ -45,6 +48,15 @@ architecture gpio_mmio of gpio_mmio is
 
 	signal video_mode_q : std_logic;
 	signal video_mode_w : std_logic;
+	type video_palette_type is array(15 downto 0) of std_logic_vector(11 downto 0);
+	-- Uses the default EGA palette
+	signal video_palette : video_palette_type := (x"FFF", x"F5F", x"5FF", x"55F", x"FF5", x"F55", x"5F5", x"555", x"AAA", x"50A", x"0AA", x"00A", x"AA0", x"A00", x"0A0", x"000");
+
+	signal video_palette_q      : std_logic_vector(7 downto 0);
+	signal video_palette_q_full : std_logic_vector(11 downto 0);
+	signal video_palette_d      : std_logic_vector(11 downto 0);
+	signal video_palette_a      : std_logic_vector(3 downto 0);
+	signal video_palette_w      : std_logic;
 begin
 	with a select
 		q <= leds_qh                    when "00000000",
@@ -61,7 +73,7 @@ begin
 		     uart_rx_buffer(6)          when "11000110",
 		     uart_rx_buffer(7)          when "11000111",
 		     (others => video_mode_q)   when "11100000",
-		     (others => '0')            when others;
+		     video_palette_q            when others;
 
 	-- LEDS
 	process(clk, leds_wh, leds_wl) begin
@@ -134,4 +146,25 @@ begin
 	end process;
 	video_mode <= video_mode_q;
 	video_mode_w <= w when (a = "11100000") else '0';
+
+	-- Video Palette
+	process(clk, video_palette_w) begin
+		if(rising_edge(clk) and video_palette_w = '1') then
+			video_palette(to_integer(unsigned(video_palette_a))) <= video_palette_d;
+		end if;
+	end process;
+
+	video_color <= video_palette(to_integer(unsigned(video_color_index)));
+	video_palette_a <= a(4 downto 1);
+	video_palette_q_full <= video_palette(to_integer(unsigned(video_palette_a)));
+
+	with a(0) select
+		video_palette_q <= x"0" & video_palette_q_full(11 downto 8) when '0',
+					  video_palette_q_full(7 downto 0)  when others;
+
+	with a(0) select
+		video_palette_d <= d(3 downto 0) & video_palette_q_full(7 downto 0) when '0',
+				   video_palette_q_full(11 downto 8) & d            when others;
+
+	video_palette_w <= w when (a(7 downto 5) = "101") else '0';
 end architecture;
